@@ -24,6 +24,7 @@ Vulnerability detection only supports the following types for now
 3. add poc setting ui.
 4. add Body(json, xml, multipart) fuzz.
 5. opt header guess-fuzz logic.
+6. [2021/12/17]: Added POC's for the log4j 2.15 bypass
 ### 2021/12/14
 ##### v0.8.1
 1. bypass dnslog.cn filter.

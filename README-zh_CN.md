@@ -28,6 +28,7 @@ Log4j2 远程代码执行漏洞，BurpSuite被动扫描插件。
 3. 加入POC设置界面。
 4. 加入 Body(json、xml、multipart) fuzz的支持。
 5. 优化header请求逻辑，降低请求数量。
+6. [2021/12/17]: 2.15 bypass POC's
 ### 2021/12/14
 ##### v0.8.1
 1. 绕过dnslog.cn的异常访问过滤。
