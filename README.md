@@ -25,6 +25,7 @@ Vulnerability detection only supports the following types for now
 4. add Body(json, xml, multipart) fuzz.
 5. opt header guess-fuzz logic.
 6. [2021/12/17]: Added POC's for the log4j 2.15 bypass
+7. [2021/12/20]: Added POC for 2.16 DoS attack
 ### 2021/12/14
 ##### v0.8.1
 1. bypass dnslog.cn filter.
