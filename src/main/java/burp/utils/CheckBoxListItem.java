@@ -29,6 +29,8 @@ public class CheckBoxListItem extends JCheckBox implements ListCellRenderer {
                 return "DNS";
             case IPOC.POC_TYPE_RMI:
                 return "RMI";
+            case IPOC.POC_TYPE_DOS:
+                return "DoS";
             default:
                 return "unknown";
         }
