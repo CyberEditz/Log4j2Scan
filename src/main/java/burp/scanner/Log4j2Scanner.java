@@ -190,13 +190,16 @@ public class Log4j2Scanner implements IScannerCheck {
             } else {
                 domainMap.putAll(crazyFuzz(baseRequestResponse, req));
             }
+            if (Config.getBoolean(Config.ENABLED_FUZZ_BAD_JSON, false)) {
+                domainMap.putAll(badJsonFuzz(baseRequestResponse, req));
+            }
             try {
                 Thread.sleep(2000); //sleep 2s, wait for network delay.
             } catch (InterruptedException e) {
                 parent.stdout.println(e);
             }
             issues.addAll(finalCheck(baseRequestResponse, req, domainMap));
-            parent.stdout.println(String.format("Scan complete: %s", req.getUrl()));
+            parent.stdout.println("Scan complete: " + req.getUrl() + " - " + (issues.size() > 0 ? String.format("found %d issue.", issues.size()) : "No issue found."));
         }
         return issues;
     }
@@ -367,6 +370,37 @@ public class Log4j2Scanner implements IScannerCheck {
         return domainMap;
     }
 
+    private Map<String, ScanItem> badJsonFuzz(IHttpRequestResponse baseRequestResponse, IRequestInfo req) {
+        Map<String, ScanItem> domainMap = new HashMap<>();
+        boolean canFuzz = false;
+        List<String> rawHeaders = req.getHeaders();
+        List<String> tmpHeaders = new ArrayList<>(rawHeaders);
+        for (int i = 1; i < rawHeaders.size(); i++) {
+            HttpHeader header = new HttpHeader(rawHeaders.get(i));
+            if (header.Name.equalsIgnoreCase("content-type")) {  //has content-type header, maybe accept application/json?
+                header.Value = "application/json;charset=UTF-8";
+                tmpHeaders.set(i, header.toString());
+                canFuzz = true;
+            }
+        }
+        if (canFuzz) {
+            for (IPOC poc : getSupportedPOCs()) {
+                String tmpDomain = backend.getNewPayload();
+                String exp = poc.generate(tmpDomain);
+                String finalPaylad = String.format("{\"%s\":%d%s%d}",   //try to create a bad-json.
+                        Utils.GetRandomString(Utils.GetRandomNumber(3, 10)),
+                        Utils.GetRandomNumber(100, Integer.MAX_VALUE),
+                        exp,
+                        Utils.GetRandomNumber(100, Integer.MAX_VALUE));
+                IParameter fakeParam = helper.buildParameter("Bad-json Fuzz", exp, IParameter.PARAM_JSON);
+                byte[] newRequest = helper.buildHttpMessage(tmpHeaders, finalPaylad.getBytes(StandardCharsets.UTF_8));
+                IHttpRequestResponse tmpReq = parent.callbacks.makeHttpRequest(baseRequestResponse.getHttpService(), newRequest);
+                domainMap.put(tmpDomain, new ScanItem(fakeParam, tmpReq));
+            }
+        }
+        return domainMap;
+    }
+
     private Map<String, ScanItem> paramsFuzz(IHttpRequestResponse baseRequestResponse, IRequestInfo req) {
         Map<String, ScanItem> domainMap = new HashMap<>();
         byte[] rawRequest = baseRequestResponse.getRequest();
@@ -417,11 +451,14 @@ public class Log4j2Scanner implements IScannerCheck {
                         tmpRawRequest = helper.updateParameter(rawRequest, newParam);
                     } else {
                         byte[] body = Arrays.copyOfRange(rawRequest, req.getBodyOffset(), rawRequest.length);
+                        boolean isJsonNumber = param.getType() == IParameter.PARAM_JSON && body[param.getValueStart() - req.getBodyOffset() - 1] != 34; // ascii:34 = "
+                        if (isJsonNumber) {
+                            exp = "\"" + exp + "\"";
+                        }
                         byte[] newBody = Utils.Replace(body, new int[]{param.getValueStart() - req.getBodyOffset(), param.getValueEnd() - req.getBodyOffset()}, exp.getBytes(StandardCharsets.UTF_8));
                         tmpRawRequest = helper.buildHttpMessage(req.getHeaders(), newBody);
                     }
                     IHttpRequestResponse tmpReq = parent.callbacks.makeHttpRequest(baseRequestResponse.getHttpService(), tmpRawRequest);
-                    tmpReq.getResponse();
                     domainMap.put(tmpDomain, new ScanItem(param, tmpReq));
                 } catch (Exception ex) {
                     parent.stdout.println(ex);
